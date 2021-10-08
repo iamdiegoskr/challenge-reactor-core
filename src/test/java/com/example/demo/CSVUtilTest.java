@@ -89,5 +89,28 @@ public class CSVUtilTest {
     }
 
 
+    @Test
+    void reactive_filtrarJugadoresPorNacionalidadConRanking() {
+        List<Player> list = CsvUtilFile.getPlayers();
+        Flux<Player> listFlux = Flux.fromStream(list.parallelStream()).cache();
+        Mono<Map<String, Collection<Player>>> listFilter = listFlux
+                .buffer(100)
+                .flatMap(playerA -> listFlux
+                        .filter(playerB -> playerA.stream()
+                                .anyMatch(a -> a.national.equals(playerB.national)))
+                ).distinct()
+                .sort((player1, player2) -> Math.max(player1.winners,player2.winners))
+                .collectMultimap(Player::getNational);
+
+
+        System.out.println("Cantidad de paises -> " + listFilter.block().size());
+
+        Objects.requireNonNull(listFilter.block()).forEach((country, players) -> {
+            System.out.println("Pais: " + country);
+            players.forEach(player -> {
+                System.out.println(player.name + ", numero de victorias: " + player.winners);
+            });
+        });
+    }
 
 }
